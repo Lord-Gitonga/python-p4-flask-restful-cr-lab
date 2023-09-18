@@ -9,7 +9,7 @@ from models import db, Plant
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plants.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = True
+app.json.compact = False
 
 migrate = Migrate(app, db)
 db.init_app(app)
@@ -17,10 +17,88 @@ db.init_app(app)
 api = Api(app)
 
 class Plants(Resource):
-    pass
+    def get(self):
+
+        response_dict = [n.to_dict() for n in Plant.query.all()]
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+
+        return response
+
+    def post(self):
+
+        new_plant = Plant (
+            image = request.form['image'],
+            name = request.form['name'],
+            price = request.form['price'],
+        )
+
+        db.session.add(new_plant)
+        db.session.commit()
+
+        response_dict = new_plant.to_dict()
+
+        response = make_response(
+            jsonify(response_dict),
+            201,
+        )
+
+        return response
+
+api.add_resource(Plants, '/plants')
 
 class PlantByID(Resource):
-    pass
+
+    def get(self, id):
+        plant_dict = Plant.query.filter_by(id=id).first().to_dict()
+
+        response = make_response(
+            jsonify(plant_dict),
+            200,
+        )
+
+        return response
+
+    def patch(self,id):
+
+        plant_patch = Plant.query.filter_by(id=id).first()
+
+        for attr in request.form:
+            setattr(plant_patch, attr, request.form[attr])
+
+        db.session.add(plant_patch)
+        db.session.commit()
+
+        response_dict = plant_patch.to_dict()
+
+        response = make_response(
+            jsonify(response_dict),
+            200
+        )
+
+        return response
+
+
+    def delete(self, id):
+
+        plant_delete = Plant.query.filter_by(id=id).first()
+
+        db.session.delete(plant_delete)
+        db.session.commit()
+
+        response_dict = {"Message": "Record deleted successfully"}
+
+        response = make_response(
+            jsonify(response_dict),
+            200,
+        )
+
+        return response
+
+api.add_resource(PlantByID, '/plants/<int:id>')
         
 
 if __name__ == '__main__':
